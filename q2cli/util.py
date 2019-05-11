@@ -175,3 +175,36 @@ def citations_option(get_citation_records):
     return click.Option(['--citations'], is_flag=True, expose_value=False,
                         is_eager=True, callback=callback,
                         help='Show citations and exit.')
+
+
+def example_data_option(get_plugin, action_name=None):
+    import click
+    from q2cli.click.type import OutDirType
+
+    def callback(ctx, param, value):
+        if not value or ctx.resilient_parsing:
+            return
+        else:
+            import q2cli.core.usage as usage
+
+        plugin = get_plugin()
+        if action_name is not None:
+            action = plugin.actions[action_name]
+            generator = usage.write_example_data(action, value)
+        else:
+            generator = usage.write_plugin_example_data(plugin, value)
+
+        ran = False
+        for hint, path in generator:
+            click.secho('Saved %s to: %s' % (hint, path), fg='green')
+            ran = True
+
+        if ran:
+            ctx.exit()
+        else:
+            click.secho('No example data found.', fg='yellow', err=True)
+            ctx.exit(1)
+
+    return click.Option(['--example-data'], type=OutDirType(), is_eager=True,
+                        expose_value=False, callback=callback,
+                        help='Write example data and exit.')
