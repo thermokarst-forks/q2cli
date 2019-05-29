@@ -42,7 +42,7 @@ def write_plugin_example_data(plugin, output_dir):
         path = os.path.join(output_dir, q2cli.util.to_cli_name(name))
         os.makedirs(output_dir, exist_ok=True)
 
-        yield from write_test_data(action, path)
+        yield from write_example_data(action, path)
 
 
 class CLIUsageFormatter(usage.Usage):
@@ -111,8 +111,7 @@ class CLIUsageFormatter(usage.Usage):
         return full_outputs, outdir
 
     def _get_plugin_name(self, action):
-        name = action.package.split('.')[-2]
-        return name.replace('_', '-')
+        return action.plugin_id
 
     def _make_param(self, value, state):
         import shlex
@@ -180,7 +179,6 @@ class CLIUsageFormatter(usage.Usage):
 
                 self._lines.append(line)
 
-
         if outdir is not None:
             self._lines.append(
                 INDENT + '--output-dir %s' % shlex.quote(outdir))
@@ -206,4 +204,7 @@ class CLIUsageFormatter(usage.Usage):
 
     def export_file(self, input_name, output_name, format=None):
         'qiime tools export '
+        pass
+
+    def assert_has_line_matching(self, label, result, path, expression):
         pass
