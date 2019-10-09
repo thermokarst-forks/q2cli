@@ -255,11 +255,9 @@ class DeploymentCache:
         import qiime2.sdk.usage as usage
 
         use = q2cli.core.usage.CLIUsageFormatter()
-        scope = usage.Scope()
-        with use.bind(scope):
-            for example in action.examples:
-                example(use)
-                use._lines.append('')
+        for example in action.examples:
+            example(use)
+            use._lines.append('')
 
         lines = use.get_result()
         return lines

@@ -18,16 +18,16 @@ def write_example_data(action, output_dir):
     for record in scope:
         path = os.path.join(output_dir, record.name)
         data = record.factory()
-        if record.type == 'artifact' or record.type == 'visualization':
+        if str(type(data)) == 'Artifact' or str(type(data)) == 'Visualization':
             path = data.save(path)
             hint = repr(data.type)
-        elif record.type == 'metadata':
-            path += '.tsv'
-            data.save(path)
-            hint = 'Metadata'
-        elif record.type == 'file':
-            util.duplicate(data, path)
-            hint = 'file'
+        # elif record.type == 'metadata':
+        #     path += '.tsv'
+        #     data.save(path)
+        #     hint = 'Metadata'
+        # elif record.type == 'file':
+        #     util.duplicate(data, path)
+        #     hint = 'file'
         else:
             raise NotImplementedError
 
@@ -70,10 +70,10 @@ class CLIUsageFormatter(usage.Usage):
 
     def _dereference(self, input_name):
         record = self.scope[input_name]
-        if record.type == 'file':
-            return input_name
-        elif record.type == 'metadata':
-            return input_name + '.tsv'
+        # if record.type == 'file':
+        #     return input_name
+        # elif record.type == 'metadata':
+        #     return input_name + '.tsv'
 
         prefix = self._outdir_map.get(input_name, '')
         if record.type == 'artifact':
@@ -102,7 +102,7 @@ class CLIUsageFormatter(usage.Usage):
             if spec.qiime_type.name == 'Visualization':
                 self.scope.add_visualization(save_name, None)
             else:
-                self.scope.add_artifact(save_name, None)
+                self.scope[save_name] = None
 
         if outdir is not None:
             for save_name in full_outputs.values():
@@ -157,16 +157,17 @@ class CLIUsageFormatter(usage.Usage):
         from q2cli.core.state import get_action_state
 
         INDENT = ' ' * 2
-        full_outputs, outdir = self._store_outputs(action, outputs)
+        action_f = self.get_action(action)
+        full_outputs, outdir = self._store_outputs(action_f, outputs)
 
-        action_state = get_action_state(action)
+        action_state = get_action_state(action_f)
         input_signature = {s['name']: s for s in action_state['signature']
                            if s['type'] != 'output'}
         output_signature = {s['name']: s for s in action_state['signature']
                             if s['type'] == 'output'}
 
         plugin_name = to_cli_name(self._get_plugin_name(action))
-        action_name = to_cli_name(action.id)
+        action_name = to_cli_name(action_f.id)
         self._lines.append('qiime %s %s \\' % (plugin_name, action_name))
 
         for param_name, value in inputs.items():
@@ -206,5 +207,5 @@ class CLIUsageFormatter(usage.Usage):
         'qiime tools export '
         pass
 
-    def assert_has_line_matching(self, label, result, path, expression):
+    def _assert_has_line_matching_(self, label, result, path, expression):
         pass
