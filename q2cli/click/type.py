@@ -91,6 +91,10 @@ class QIIME2Type(click.ParamType):
                 self.fail('%r is already a directory.' % (value,), param, ctx)
 
         directory = os.path.dirname(value)
+        if directory and not os.path.exists(directory):
+            self.fail('Directory %r does not exist, cannot save %r into it.'
+                      % (directory, os.path.basename(value)), param, ctx)
+
         if not is_writable_dir(directory):
             self.fail('%r is not a writable directory, cannot write output'
                       ' to it.' % (directory,), param, ctx)
@@ -192,7 +196,14 @@ class QIIME2Type(click.ParamType):
     def _convert_primitive(self, value, param, ctx):
         import qiime2.sdk.util
 
-        return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        try:
+            return qiime2.sdk.util.parse_primitive(self.type_expr, value)
+        except ValueError:
+            expr = qiime2.sdk.util.type_from_ast(self.type_ast)
+            raise click.BadParameter(
+                'received <%s> as an argument, which is incompatible'
+                ' with parameter type: %r' % (value, expr),
+                ctx=ctx)
 
     @property
     def name(self):
