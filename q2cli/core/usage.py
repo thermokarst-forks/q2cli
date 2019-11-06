@@ -9,6 +9,8 @@ def write_example_data(action, output_dir):
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # TODO: looks like something might be wrong here still?
+
     use = usage.NoOpUsage()
     scope = usage.Scope()
     with use.bind(scope):
@@ -75,6 +77,7 @@ class CLIUsageFormatter(usage.Usage):
         # elif record.type == 'metadata':
         #     return input_name + '.tsv'
 
+        print(record)
         prefix = self._outdir_map.get(input_name, '')
         if record.type == 'artifact':
             suffix = '.qza'
