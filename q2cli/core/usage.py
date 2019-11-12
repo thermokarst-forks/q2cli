@@ -72,12 +72,13 @@ class CLIUsageFormatter(usage.Usage):
 
     def _dereference(self, input_name):
         record = self.scope[input_name]
-        # if record.type == 'file':
-        #     return input_name
-        # elif record.type == 'metadata':
-        #     return input_name + '.tsv'
+        result = record.factory()
 
-        print(record)
+        if record.type == 'file':
+            return input_name
+        elif record.type == 'metadata':
+            return input_name + '.tsv'
+
         prefix = self._outdir_map.get(input_name, '')
         if record.type == 'artifact':
             suffix = '.qza'
@@ -98,14 +99,13 @@ class CLIUsageFormatter(usage.Usage):
 
         full_outputs = {k: k for k in action.signature.outputs}
         full_outputs.update(outputs)
-        print(full_outputs)
 
         for original_name, save_name in full_outputs.items():
             spec = action.signature.outputs[original_name]
             if spec.qiime_type.name == 'Visualization':
                 self.scope.add_visualization(save_name, None)
             else:
-                self.scope[save_name] = None
+                self.scope[save_name.name] = None
 
         if outdir is not None:
             for save_name in full_outputs.values():
