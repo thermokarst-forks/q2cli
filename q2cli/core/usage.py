@@ -87,13 +87,12 @@ class CLIUsageFormatter(usage.Usage):
 
         return prefix + input_name + suffix
 
-    def _store_outputs(self, action, outputs):
+    def _store_outputs(self, action):
         outdir = None
-        if outputs is None:
-            outputs = {}
+        outputs = {}
 
-            if len(action.signature.outputs) > 4:
-                outdir = to_cli_name(action.id) + '-results/'
+        if len(action.signature.outputs) > 4:
+            outdir = to_cli_name(action.id) + '-results/'
         if self.outdir is not None:
             outdir = self.outdir
 
@@ -103,9 +102,9 @@ class CLIUsageFormatter(usage.Usage):
         for original_name, save_name in full_outputs.items():
             spec = action.signature.outputs[original_name]
             if spec.qiime_type.name == 'Visualization':
-                self.scope.add_visualization(save_name, None)
+                self._scope.add_visualization(save_name, None)
             else:
-                self.scope[save_name.name] = None
+                self._scope.push_record(save_name, False, value=None)
 
         if outdir is not None:
             for save_name in full_outputs.values():
@@ -160,8 +159,8 @@ class CLIUsageFormatter(usage.Usage):
         from q2cli.core.state import get_action_state
 
         INDENT = ' ' * 2
-        action_f = self.get_action(action)
-        full_outputs, outdir = self._store_outputs(action_f, outputs)
+        action_f = action.get_action(self._plugin_manager)
+        full_outputs, outdir = self._store_outputs(action_f)
 
         action_state = get_action_state(action_f)
         input_signature = {s['name']: s for s in action_state['signature']
