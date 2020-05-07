@@ -33,19 +33,15 @@ class CLIUsage(usage.Usage):
         return ref
 
     def _merge_metadata_(self, ref, records):
-        merge_target = ref
-        return merge_target
+        return records
 
     def _get_metadata_column_(self, ref, record, column_name):
-        md = record.result
-        return column_name, md
+        return column_name
 
     def _comment_(self, text: str):
         self._recorder.append('# %s' % (text,))
 
-    def _action_(
-        self, action: usage.UsageAction, input_opts: dict, output_opts: dict
-    ):
+    def _action_(self, action, input_opts, output_opts):
         t = self._template_action(action, input_opts, output_opts)
         self._recorder.append(t)
         return output_opts
@@ -61,12 +57,11 @@ class CLIUsage(usage.Usage):
 
     def _extract_from_signature(self, action_sig):
         params, mds = [], []
-        for i, spec in action_sig.parameters.items():
-            q_type = spec.qiime_type
-            if is_metadata_type(q_type):
-                mds.append((i, spec))
+        for param, spec in action_sig.parameters.items():
+            if is_metadata_type(spec.qiime_type):
+                mds.append((param, spec))
             else:
-                params.append((i, spec))
+                params.append((param, spec))
         return params, mds
 
     def _template_action(self, action, input_opts, outputs):
@@ -81,6 +76,7 @@ class CLIUsage(usage.Usage):
         action_t = self._format_templates(cmd, templates)
         return action_t
 
+    # TODO: revisit this signature
     def _format_templates(self, command, templates):
         wrapper = textwrap.TextWrapper(initial_indent=" " * 4)
         templates = itertools.chain(*templates)
@@ -91,26 +87,38 @@ class CLIUsage(usage.Usage):
 
     def _template_inputs(self, action_sig, input_opts):
         inputs = []
-        for i in action_sig.inputs:
-            if i in input_opts:
-                p = f"--i-{to_cli_name(i)}"
-                val = f"{input_opts[i]}.qza"
-                inputs.append(f"{p} {val}")
+        for input_ in action_sig.inputs:
+            if input_ in input_opts:
+                flag = to_cli_name(input_)
+                # TODO: should the val be transformed to cli name, too?
+                val = input_opts[input_]
+                inputs.append(f"--i-{flag} {val}.qza")
         return inputs
 
     def _template_parameters(self, params, input_opts):
         params_t = []
-        for i, spec in params:
-            val = str(input_opts[i]) if i in input_opts else ""
+        for param, spec in params:
+            val = str(input_opts[param]) if param in input_opts else ""
             if spec.qiime_type is Bool:
-                pfx = f"--p-" if val == "True" else f"--p-no-"
-                p = f"{pfx}{to_cli_name(i)}"
+                prefix = f"--p-" if val == "True" else f"--p-no-"
+                p = f"{prefix}{to_cli_name(param)}"
                 params_t.append(p)
             elif val:
-                p = f"--p-{to_cli_name(i)}"
-                _val = f" {val}"
-                params_t.append(f"{p + _val}")
+                params_t.append(f"--p-{to_cli_name(param)} {val}")
         return params_t
+
+    def _template_metadata(self, mds, input_opts):
+        mds_t = []
+        print(input_opts)
+        # TODO: okay, I think the easiest way to get what we need is to modify
+        # the scope records to include an `origin` field, that will let us
+        # make some decisions on what to do with a value, based on it's origin.
+        # for example, if a record came from a `get_metadata_column`, then we can
+        # assume one thing, if it came from an `init_data` call, we can assume another
+        # (and also use the action sig to further refine that assumption)
+        for md, spec in mds:
+            print(md, spec)
+        return mds_t
 
     def _template_outputs(self, action_sig, outputs):
         outputs_t = []
@@ -121,41 +129,6 @@ class CLIUsage(usage.Usage):
             val = f"{to_snake_case(outputs[i])}{ext}"
             outputs_t.append(f"{p} {val}")
         return outputs_t
-
-    def _template_metadata(self, mds, input_opts):
-        mds_t = []
-        data = self.get_example_data()
-        data = {k: v for k, v in data.items() if isinstance(v, Metadata)}
-        file_param = f"--m-metadata-file"
-        col_param = f"--m-metadata-column"
-        for i, spec in mds:
-            qtype = spec.qiime_type
-            if not is_metadata_column_type(qtype):
-                name = str(input_opts[i]) if i in input_opts else ""
-                if name in data:
-                    # Metadata item `i` was registered by Usage.init_data and
-                    # can therefore be assumed *not* to be a merge target.
-                    mds_t.append(f"{file_param} {name}.tsv")
-                else:
-                    # Metadata item `i` was not registered by Usage.init_data
-                    # and can therefore be assumed to be a merge target.
-                    #
-                    # Extract metadata that was merged into merge target `i`
-                    for k, v in data.items():
-                        mds_t.append(f"{file_param} {k}.tsv")
-            elif is_metadata_column_type(qtype):
-                try:
-                    col, md = input_opts[i]
-                except ValueError:
-                    # The metadata column was passed in as a factory. The
-                    # factory needs to be called so we can get the column name
-                    md = input_opts[i]
-                    data = self._init_data_refs[md]()
-                    col = data.name
-                mds_t.append(f"{file_param} {md}.tsv")
-                mds_t.append(f"{col_param} '{col}'")
-        return mds_t
-
 
 def examples(action):
     all_examples = []
